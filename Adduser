@@ -1,0 +1,36 @@
+#-----------------------------------------------------------------------
+#<copyright file=""AddUser.ps1"" company=""OUTCAST.BERLIN"">
+#Copyright (c) 2020. All rights reserved.
+#<author>Roel van Roozendaal</author>
+#<date>26-11-2020</date>
+#</copyright>
+#-----------------------------------------------------------------------
+Write-Host (Get-date) -ForegroundColor Green
+Write-Host 'Greetings Professor Falken. Shall we create a new user?' -ForegroundColor Green
+Write-Host ''
+
+$UserName = Read-Host -Prompt "Please Enter Display Name: "
+$UserDomain= Read-Host -Prompt "Please Enter Domain: "
+$UserTitle= Read-Host -Prompt "Please Enter Username: "
+$UserDescription = $UserName
+
+$config_path = "E:\SDL\PowerShell\Tridion.ContentManager.CoreService.Client.dll.config"
+copy "$config_path" "$pshome\powershell.exe.config" -Force
+
+[appdomain]::CurrentDomain.SetData("APP_CONFIG_FILE", "$pshome\powershell.exe.config")
+Add-Type -Path "E:\SDL\PowerShell\Tridion.ContentManager.CoreService.Client.dll"
+
+$client = New-Object Tridion.ContentManager.CoreService.Client.SessionAwareCoreServiceClient("wsHttp_201701")
+$defaultReadOptions = New-Object Tridion.ContentManager.CoreService.Client.ReadOptions
+$usersFilter = New-Object Tridion.ContentManager.CoreService.Client.UsersFilterData
+
+$NewUser = @($client.GetSystemWideList($usersFilter) | ? {$_.Description -eq $UserDescription})[0]
+if ($NewUser -eq $null) {
+    $NewUser = $client.GetDefaultData(65552, $null, $null)
+    $NewUser.Title = "$UserDomain\$UserTitle"
+    $NewUser.Description = $UserDescription
+    $NewUser = $client.Create($NewUser, $defaultReadOptions)
+}
+
+$client.Save($NewUser, $null)
+$client.Close()
